@@ -55,12 +55,12 @@ void loop() {
 
         switch (cmd) {
             // --- Base (Pin 3) ---
-            case 'a': moveContinuous(sBase, stopBase - speedOffset, stopBase); break;
-            case 'd': moveContinuous(sBase, stopBase + speedOffset, stopBase); break;
+            case 'a': moveContinuous(sBase, stopBase + speedOffset, stopBase); break;
+            case 'd': moveContinuous(sBase, stopBase - speedOffset, stopBase); break;
 
             // --- Shoulder (Pin 5) ---
-            case 'w': moveContinuous(sShoulder, stopShoulder - speedOffset, stopShoulder); break;
-            case 's': moveContinuous(sShoulder, stopShoulder + speedOffset, stopShoulder); break;
+            case 'w': moveContinuous(sShoulder, stopShoulder + speedOffset, stopShoulder); break;
+            case 's': moveContinuous(sShoulder, stopShoulder - speedOffset, stopShoulder); break;
 
             // --- Elbow (Pin 6) ---
             case 'q': moveContinuous(sElbow, stopElbow - speedOffset, stopElbow); break;
