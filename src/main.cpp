@@ -1,54 +1,87 @@
 #include <Arduino.h>
 #include <Servo.h>
 
-// 定義馬達物件
-Servo base, shoulder, elbow, gripper;
+// 定義馬達
+Servo sBase, sShoulder, sElbow, sGripper;
 
-// 定義腳位
-const int pins[] = {3, 5, 6, 9};
-Servo* servos[] = {&base, &shoulder, &elbow, &gripper};
-const char* names[] = {"Base (Pin 3)", "Shoulder (Pin 5)", "Elbow (Pin 6)", "Gripper (Pin 9)"};
+// --- 360度馬達 靜止點 (請依據實際測試微調 90-93) ---
+int stopBase = 90;
+int stopShoulder = 90;
+int stopElbow = 92; 
 
-void testServo(int index) {
-    Serial.print("正在測試: ");
-    Serial.println(names[index]);
-    
-    servos[index]->attach(pins[index]); // 連接馬達
-    
-    // 0 -> 180 度
-    for (int pos = 0; pos <= 180; pos += 2) {
-        servos[index]->write(pos);
-        delay(15);
-    }
-    // 180 -> 0 度
-    for (int pos = 180; pos >= 0; pos -= 2) {
-        servos[index]->write(pos);
-        delay(15);
-    }
-    
-    servos[index]->detach(); // 測試完斷開，省電也避免干擾
-    Serial.println("測試完成。");
-}
+// --- 180度前爪 參數 (保留你的修改) ---
+int gripAngle = 120; 
+int gripStep = 10;   
+
+// --- 速度與時間設定 ---
+int speedOffset = 20;    // 轉動速度
+int moveDuration = 150;  // 每個按鍵字元觸發轉動的時間 (毫秒)
 
 void setup() {
     Serial.begin(9600);
-    Serial.println("--- meArm 馬達逐一測試程式 ---");
-    Serial.println("請輸入數字來測試對應馬達:");
-    Serial.println("1: 底座 (Pin 3)");
-    Serial.println("2: 肩部 (Pin 5)");
-    Serial.println("3: 肘部 (Pin 6)");
-    Serial.println("4: 夾爪 (Pin 9)");
+    
+    sBase.attach(3);
+    sShoulder.attach(5);
+    sElbow.attach(6);
+    sGripper.attach(9);
+
+    // 初始停止狀態
+    sBase.write(stopBase);
+    sShoulder.write(stopShoulder);
+    sElbow.write(stopElbow);
+    sGripper.write(gripAngle); 
+
+    Serial.println("--- 時間模擬角度控制模式 ---");
+    Serial.println("輸入 w/s, a/d, e/q 多個字母並按 Enter (例如: www)");
+    Serial.println("空白鍵 或 x：緊急停止所有馬達");
+}
+
+// 輔助函式：讓馬達轉動一小段時間後停止
+void moveContinuous(Servo &s, int speed, int stopPoint) {
+    s.write(speed);
+    delay(moveDuration); // 按下一次移動的時間
+    s.write(stopPoint);  // 移動完畢自動停止
+}
+
+void stopAll() {
+    sBase.write(stopBase);
+    sShoulder.write(stopShoulder);
+    sElbow.write(stopElbow);
 }
 
 void loop() {
     if (Serial.available() > 0) {
-        char input = Serial.read();
-        int choice = input - '1'; 
+        char cmd = Serial.read();
 
-        if (choice >= 0 && choice <= 3) {
-            testServo(choice);
-        } else if (input != '\n' && input != '\r') {
-            Serial.println("無效輸入，請輸入 1, 2, 3 或 4");
+        switch (cmd) {
+            // --- Base (Pin 3) ---
+            case 'a': moveContinuous(sBase, stopBase - speedOffset, stopBase); break;
+            case 'd': moveContinuous(sBase, stopBase + speedOffset, stopBase); break;
+
+            // --- Shoulder (Pin 5) ---
+            case 'w': moveContinuous(sShoulder, stopShoulder - speedOffset, stopShoulder); break;
+            case 's': moveContinuous(sShoulder, stopShoulder + speedOffset, stopShoulder); break;
+
+            // --- Elbow (Pin 6) ---
+            case 'q': moveContinuous(sElbow, stopElbow - speedOffset, stopElbow); break;
+            case 'e': moveContinuous(sElbow, stopElbow + speedOffset, stopElbow); break;
+
+            // --- Gripper (Pin 9) 保留你的 120-140 度邏輯 ---
+            case 'r': 
+                gripAngle = constrain(gripAngle - gripStep, 120, 140); 
+                sGripper.write(gripAngle);
+                break; 
+            case 'f': 
+                gripAngle = constrain(gripAngle + gripStep, 120, 140); 
+                sGripper.write(gripAngle);
+                break;
+
+            // --- 空白鍵或 x：緊急停止 ---
+            case ' ':
+            case 'x':
+                stopAll();
+                Serial.println("!!! EMERGENCY STOP !!!");
+                break;
         }
     }
 }
